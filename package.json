@@ -1,0 +1,53 @@
+{
+  "name": "examplatform-fe",
+  "version": "0.0.1",
+  "description": "ExamPlatform Examinee FE",
+  "productName": "ExamPlatform Examinee App",
+  "author": "hermitriver <hermitriver@hotmail.com>",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "eslint -c ./eslint.config.js \"./src*/**/*.{ts,js,cjs,mjs,vue}\"",
+    "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
+    "dev": "quasar dev",
+    "dev:test": "cross-env QUASAR_ENV=test quasar dev",
+    "build": "quasar build",
+    "build:test": "cross-env QUASAR_ENV=test quasar build",
+    "postinstall": "quasar prepare"
+  },
+  "dependencies": {
+    "@quasar/cli": "^2.5.0",
+    "@quasar/extras": "^1.17.0",
+    "@types/ali-oss": "^6.16.11",
+    "ali-oss": "^6.23.0",
+    "axios": "^1.11.0",
+    "pinia": "^3.0.3",
+    "quasar": "^2.18.2",
+    "vue": "^3.5.21",
+    "vue-i18n": "^11.1.12",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@intlify/unplugin-vue-i18n": "^4.0.0",
+    "@quasar/app-vite": "^2.3.0",
+    "@types/node": "^20.19.13",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "autoprefixer": "^10.4.21",
+    "cross-env": "^10.0.0",
+    "dotenv": "^17.2.2",
+    "eslint": "^9.35.0",
+    "eslint-plugin-vue": "^9.33.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.2",
+    "vite-plugin-checker": "^0.9.3",
+    "vue-tsc": "^2.2.12"
+  },
+  "engines": {
+    "node": "^28 || ^26 || ^24 || ^22 || ^20 || ^18",
+    "npm": ">= 6.13.4",
+    "yarn": ">= 1.21.1"
+  }
+}
