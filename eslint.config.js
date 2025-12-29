@@ -1,9 +1,9 @@
 import js from '@eslint/js'
-import globals from 'globals'
-import pluginVue from 'eslint-plugin-vue'
 import pluginQuasar from '@quasar/app-vite/eslint'
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import prettierSkipFormatting from '@vue/eslint-config-prettier/skip-formatting'
+import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
+import pluginVue from 'eslint-plugin-vue'
+import globals from 'globals'
 
 export default defineConfigWithVueTs(
   {
@@ -15,7 +15,14 @@ export default defineConfigWithVueTs(
      *
      * ESLint requires "ignores" key to be the only one in this object
      */
-    // ignores: []
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.quasar/**',
+      '**/coverage/**',
+      '**/build/**',
+      '**/.vscode/**'
+    ]
   },
 
   pluginQuasar.configs.recommended(),

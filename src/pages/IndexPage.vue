@@ -1,67 +1,102 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import axios from 'axios';
-import { url_exam_login } from 'src/util/util-url';
-import { useUserStore } from 'stores/user-store';
-import { getErrorMessage } from 'src/util/util';
-import { useQuasar } from 'quasar';
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useExamStore } from 'stores/exam-store';
+import { useQuasar } from 'quasar';
+import { storeToRefs } from 'pinia';
+import { usePaperStore } from 'stores/paper-store';
 
-const text = ref<string>('');
-const errorMessage = ref<string>('');
-const $q = useQuasar();
 const router = useRouter();
+const $q = useQuasar();
+const paperStore = usePaperStore();
+const { paperList, isLoading, total } = storeToRefs(paperStore);
 
-function notifyError(message: string, caption: string='Error') {
-  console.error(message, caption);
-  $q.notify({
-    caption: caption,
-    message: message,
-    position: 'top',
-    icon: 'error',
-    color: 'negative',
+const columns = [
+  { name: 'title', label: 'Title', field: 'title', align: 'left', sortable: true },
+  { name: 'status', label: 'Status', field: 'status', sortable: true },
+  { name: 'sections', label: 'Sections', field: 'section_count', sortable: true },
+  { name: 'questions', label: 'Questions', field: 'question_count', sortable: true },
+  { name: 'actions', label: 'Actions', field: 'id', align: 'right' },
+];
+
+onMounted(() => {
+  paperStore.fetchList().catch((e) => console.error(e));
+});
+
+function notify(message: string, type: 'positive' | 'negative' = 'positive') {
+  $q.notify({ type, message, position: 'top' });
+}
+
+function editPaper(row: any) {
+  router.push({ name: 'exam', query: { paperId: row.id } });
+}
+
+async function duplicatePaper(row: any) {
+  try {
+    const newId = await paperStore.duplicatePaper(row.id);
+    notify('Paper duplicated');
+    router.push({ name: 'exam', query: { paperId: newId } });
+  } catch (e: any) {
+    notify(e?.message || 'Duplicate failed', 'negative');
+  }
+}
+
+async function deletePaper(row: any) {
+  $q.dialog({
+    title: 'Archive Paper',
+    message: 'Are you sure you want to archive this paper?',
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await paperStore.deletePaper(row.id);
+      notify('Paper archived');
+    } catch (e: any) {
+      notify(e?.message || 'Archive failed', 'negative');
+    }
   });
 }
 
-const onLogin = () => {
-  text.value = text.value.trim();
-  if (text.value.length == 0) {
-    notifyError('Please enter your student ID', 'Login Error');
-    return;
-  }
-  axios({
-    method: 'POST',
-    url: url_exam_login,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    data: {
-      username: text.value,
-      password: '',
-    },
-  })
-  .then((response) => {
-    errorMessage.value = "";
-    useUserStore().login(response.data.access_token, response.data.user);
-    useExamStore().exam = response.data.exam;
-    if (response.data.exam && response.data.exam.status < 4)
-      void router.push("/exam");
-  })
-  .catch((error) => {
-    errorMessage.value = getErrorMessage(error);
-    notifyError(errorMessage.value, 'Login Error');
-  });
-};
+function newPaper() {
+  paperStore.newDraft();
+  router.push({ name: 'exam' });
+}
 </script>
 
 <template>
-  <div class="flex flex-center" style="height: 60vh;">
-    <div class="column items-center q-gutter-y-md">
-      <q-input outlined v-model="text" label="Student ID" @keydown.enter="onLogin"/>
-      <q-separator spaced />
-      <q-btn color="primary" label="Login" @click="onLogin"/>
-      <label v-if="errorMessage != ''" style="color: red">{{errorMessage}}</label>
+  <q-page class="q-pa-lg">
+    <div class="row items-center q-mb-md">
+      <div class="text-h5">Exam Papers</div>
+      <q-space />
+      <q-btn color="primary" icon="add" label="New Paper" @click="newPaper" />
     </div>
-  </div>
+
+    <q-table
+      flat
+      bordered
+      :rows="paperList"
+      :columns="columns"
+      row-key="id"
+      :loading="isLoading"
+      :rows-per-page-options="[10, 20, 50]"
+    >
+      <template #body-cell-title="props">
+        <q-td :props="props">
+          <div class="text-weight-medium">{{ props.row.title }}</div>
+          <div class="text-caption text-grey-7">ID: {{ props.row.id }}</div>
+        </q-td>
+      </template>
+      <template #body-cell-actions="props">
+        <q-td :props="props">
+          <div class="row q-gutter-xs justify-end">
+            <q-btn flat dense size="sm" icon="edit" @click="() => editPaper(props.row)" />
+            <q-btn flat dense size="sm" icon="content_copy" @click="() => duplicatePaper(props.row)" />
+            <q-btn flat dense size="sm" color="negative" icon="archive" @click="() => deletePaper(props.row)" />
+          </div>
+        </q-td>
+      </template>
+      <template #no-data>
+        <div class="q-pa-md text-grey-6">No papers yet. Create one to get started.</div>
+      </template>
+    </q-table>
+  </q-page>
 </template>

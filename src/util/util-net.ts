@@ -1,6 +1,8 @@
 //import { useUserStore } from '@/stores/user';
 import axios from 'axios';
+import { api } from 'boot/axios';
 import { getErrorMessage } from 'src/util/util';
+import type { Paper, ScheduleAssignment } from 'src/components/models';
 
 export interface NetConfig {
   method?: string,
@@ -132,3 +134,48 @@ export async function streamWithToken2(config: NetConfig, body: BodyInit | null)
     }
   }
 }
+
+
+// --- REST helpers for papers and schedules ---
+export const paperApi = {
+  list(params?: Record<string, unknown>) {
+    return api.get('/api/papers', { params });
+  },
+  get(paperId: string) {
+    return api.get(`/api/papers/${paperId}`);
+  },
+  create(payload: Paper) {
+    return api.post('/api/papers', payload);
+  },
+  update(paperId: string, payload: Paper) {
+    return api.put(`/api/papers/${paperId}`, payload);
+  },
+  publish(paperId: string, version?: number) {
+    return api.post(`/api/papers/${paperId}/publish`, { version });
+  },
+  duplicate(paperId: string) {
+    return api.post(`/api/papers/${paperId}/duplicate`);
+  },
+  remove(paperId: string) {
+    return api.delete(`/api/papers/${paperId}`);
+  },
+  importMarkdown(markdownText: string) {
+    const formData = new FormData();
+    formData.append('markdown_text', markdownText);
+    return api.post('/api/papers/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
+export const scheduleApi = {
+  createAssignment(sessionId: string, payload: ScheduleAssignment) {
+    return api.post(`/api/sessions/${sessionId}/assignments`, payload);
+  },
+  updateAssignment(sessionId: string, assignmentId: string, payload: ScheduleAssignment) {
+    return api.put(`/api/sessions/${sessionId}/assignments/${assignmentId}`, payload);
+  },
+  deleteAssignment(sessionId: string, assignmentId: string) {
+    return api.delete(`/api/sessions/${sessionId}/assignments/${assignmentId}`);
+  },
+};

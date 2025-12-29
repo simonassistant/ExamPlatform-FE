@@ -1,0 +1,10 @@
+node_modules/
+.dist/
+dist/
+.quasar/
+coverage/
+build/
+.vscode/
+src-cordova/
+src-capacitor/
+*.min.js
