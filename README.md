@@ -118,6 +118,23 @@ src/
 | `/headset` | `HeadsetPage.vue` | Audio device check (for listening/speaking exams) |
 | `/section` | `SectionPage.vue` | Section navigation and countdown |
 | `/question` | `QuestionPage.vue` | Question display and answer submission |
+| `/proctor` | `proctor/*` | Proctor management interface (Login, Papers, Schedules) |
+
+## Testing
+
+The project uses **Vitest** for unit/component testing and **Cypress** for E2E testing.
+
+### Unit Tests
+Run unit tests for components and logic:
+```bash
+npx vitest run
+```
+
+### E2E Tests
+Run end-to-end tests:
+```bash
+npx cypress run
+```
 
 ## State Management
 

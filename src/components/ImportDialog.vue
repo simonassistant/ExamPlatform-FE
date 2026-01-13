@@ -47,7 +47,7 @@ function onImport() {
           placeholder="# Paper Title\n\n## Section 1..."
           :model-value="markdownText"
           :disable="loading"
-          @update:model-value="(v) => (markdownText = v)"
+          @update:model-value="(v) => (markdownText = String(v || ''))"
         />
         <div v-if="error" class="text-negative text-caption q-mt-xs">{{ error }}</div>
       </q-card-section>

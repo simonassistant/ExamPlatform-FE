@@ -4,12 +4,11 @@ import { url_exam_question, url_exam_section, url_exam_section_start } from 'src
 import { useUserStore } from 'stores/user-store';
 import { type ExamAnswer, type ExamSection, useExamStore } from 'stores/exam-store';
 import {
-  type PaperSection,
   type Question,
-  type QuestionGroup,
   type QuestionOption,
-  usePaperStore
-} from 'stores/paper-store';
+  type PaperSection,
+} from 'src/components/models';
+import { usePaperStore } from 'stores/paper-store';
 import { onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
@@ -18,7 +17,6 @@ import { formatDuration } from 'src/util/util';
 interface QuestionResult {
   exam_answer: ExamAnswer;
   question: Question;
-  question_group: QuestionGroup;
   question_options: QuestionOption[];
 }
 
@@ -120,7 +118,6 @@ const onGetQuestionSuccess = function(data: unknown) {
   const result = data as QuestionResult;
   examStore.answer = result.exam_answer;
   paperStore.question = result.question;
-  paperStore.questionGroup = result.question_group;
   paperStore.questionOptions = result.question_options;
   router.push('/question').catch((error) => {
     notifyError(error.message, 'Failed to go to Exam Question');
@@ -157,7 +154,7 @@ accessWithToken({
   },
 }, {
   exam_id: examStore.exam.id,
-  section_seq: paperStore.section.seq,
+  section_seq: paperStore.section?.seq || 1,
 });
 </script>
 

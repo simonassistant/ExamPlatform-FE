@@ -42,13 +42,13 @@ function emitUpdate(partial: Partial<Paper>) {
           standout="bg-grey-2"
           dense
           clearable
-          @update:model-value="(v) => emitUpdate({ title: v || '' })"
+          @update:model-value="(v) => emitUpdate({ title: String(v || '') })"
         />
       </div>
       <div class="col-12 col-md-6">
         <q-select
           label="Default Question Type"
-          :model-value="current.questionType"
+          :model-value="current.question_type"
           :options="questionTypeOptions"
           option-label="label"
           option-value="value"
@@ -56,7 +56,7 @@ function emitUpdate(partial: Partial<Paper>) {
           emit-value
           dense
           :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ questionType: v as QuestionType })"
+          @update:model-value="(v) => emitUpdate({ question_type: v as QuestionType })"
         />
       </div>
       <div class="col-12 col-md-6">
@@ -66,37 +66,27 @@ function emitUpdate(partial: Partial<Paper>) {
           :model-value="current.duration ?? ''"
           dense
           :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ duration: v ? Number(v) : undefined })"
+          @update:model-value="(v) => { if (v) emitUpdate({ duration: Number(v) }); }"
         />
       </div>
       <div class="col-12 col-md-4">
         <q-input
           label="Full Score"
           type="number"
-          :model-value="current.fullScore ?? ''"
+          :model-value="current.full_score ?? ''"
           dense
           :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ fullScore: v ? Number(v) : undefined })"
+          @update:model-value="(v) => { if (v) emitUpdate({ full_score: Number(v) }); }"
         />
       </div>
       <div class="col-12 col-md-4">
         <q-input
           label="Pass Score"
           type="number"
-          :model-value="current.passScore ?? ''"
+          :model-value="current.pass_score ?? ''"
           dense
           :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ passScore: v ? Number(v) : undefined })"
-        />
-      </div>
-      <div class="col-12 col-md-4">
-        <q-input
-          label="Unit Score"
-          type="number"
-          :model-value="current.unitScore ?? ''"
-          dense
-          :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ unitScore: v ? Number(v) : undefined })"
+          @update:model-value="(v) => { if (v) emitUpdate({ pass_score: Number(v) }); }"
         />
       </div>
       <div class="col-12">
@@ -106,7 +96,7 @@ function emitUpdate(partial: Partial<Paper>) {
           autogrow
           :model-value="current.note ?? ''"
           :disable="disabled"
-          @update:model-value="(v) => emitUpdate({ note: v ?? '' })"
+          @update:model-value="(v) => emitUpdate({ note: String(v ?? '') })"
         />
       </div>
     </q-card-section>

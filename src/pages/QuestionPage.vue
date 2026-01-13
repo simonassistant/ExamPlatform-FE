@@ -3,14 +3,13 @@ import { type QTreeNode, useQuasar } from 'quasar';
 import { type ExamAnswer, useExamStore } from 'stores/exam-store';
 import {
   type Question,
-  type QuestionGroup,
   type QuestionOption,
   QuestionType,
-  usePaperStore
-} from 'stores/paper-store';
+} from 'src/components/models';
+import { usePaperStore } from 'stores/paper-store';
 import { computed, onUnmounted, type Ref, ref } from 'vue';
 import { accessWithToken } from 'src/util/util-net';
-import { url_exam_answer, url_exam_question, url_exam_questions_in_group } from 'src/util/util-url';
+import { url_exam_answer, url_exam_question, url_exam_questions_in_section } from 'src/util/util-url';
 import { useUserStore } from 'stores/user-store';
 import { formatDuration, stripHtml } from 'src/util/util';
 import { clearCountDownTimer, submitSection } from 'src/util/util-biz';
@@ -30,10 +29,10 @@ const recorderRef = ref<AudioRecorderType | null>(null);
 
 let countDownWarned = false;
 let warningTime = -1;
-if (![QuestionType.Listening, QuestionType.Speaking].includes(paperStore.section.question_type)) {
-  if (paperStore.section.duration >= 10) {
+if (paperStore.section && ![QuestionType.Listening, QuestionType.Speaking].includes(paperStore.section.question_type || QuestionType.SingleChoice)) {
+  if (paperStore.section.duration && paperStore.section.duration >= 10) {
     warningTime = 300;
-  } else if (paperStore.section.duration < 10 && paperStore.section.duration >= 5) {
+  } else if (paperStore.section.duration && paperStore.section.duration < 10 && paperStore.section.duration >= 5) {
     warningTime = 120;
   }
 }
@@ -62,8 +61,7 @@ const showTime = ref(true);
 
 const fontSize = ref(14);
 const splitterModel = ref(50);
-const question = ref<Question>(paperStore.question);
-const questionGroup = ref<QuestionGroup>(paperStore.questionGroup);
+const question = ref<Question>(paperStore.question!);
 const questionOptions = ref(paperStore.questionOptions);
 const examAnswer = ref<ExamAnswer>(examStore.answer);
 const options = ref([{}]);
@@ -82,8 +80,8 @@ const wordCount = computed(() => {
   return value ? value.trim().split(' ').length : 0;
 })
 
-const answered = ref(new Array(paperStore.section.question_num).fill(false));
-const marks = ref(new Array(paperStore.section.question_num).fill(false));
+const answered = ref(new Array(paperStore.section?.question_num || paperStore.section?.questions?.length || 10).fill(false));
+const marks = ref(new Array(paperStore.section?.question_num || paperStore.section?.questions?.length || 10).fill(false));
 const mark = ref(false);
 
 const saveRemindDlg = ref(false);
@@ -92,7 +90,8 @@ const submitSectionDlg = ref(false);
 const reviewDlg = ref(false);
 const reviewIdx = ref();
 const ops = [];
-for (let i=0; i<paperStore.section.question_num; i++) {
+const questionCount = paperStore.section?.question_num || paperStore.section?.questions?.length || 10;
+for (let i=0; i<questionCount; i++) {
   const idx = (i+1) + '';
   ops.push({
     label: idx,
@@ -102,18 +101,17 @@ for (let i=0; i<paperStore.section.question_num; i++) {
 }
 const reviewOptions = ref(ops);
 
-const questionsInGroupFlag = ref(false);
-const questionsInGroupTree:Ref<QTreeNode[]> = ref([]);
+const questionsInSectionFlag = ref(false);
+const questionsInSectionTree:Ref<QTreeNode[]> = ref([]);
 
 
 interface QuestionResult {
   exam_answer: ExamAnswer;
   question: Question;
-  question_group: QuestionGroup;
   question_options: QuestionOption[];
 }
 
-interface QuestionsInGroupResult {
+interface QuestionsInSectionResult {
   questions: Question[];
   question_options: QuestionOption[];
 }
@@ -135,7 +133,8 @@ function notifyError(message: string, caption: string='Error') {
 
 function loadMark() {
   const ops = [];
-  for (let i=0; i<paperStore.section.question_num; i++) {
+  const questionCount = paperStore.section?.question_num || paperStore.section?.questions?.length || 10;
+  for (let i=0; i<questionCount; i++) {
     const m = marks.value[i];
     const idx = (i+1) + '';
     ops.push({
@@ -158,26 +157,24 @@ function loadQuestion(result:QuestionResult | null=null) {
   if (result) {
     examAnswer.value = result.exam_answer;
     question.value = result.question;
-    questionGroup.value = result.question_group;
     questionOptions.value = result.question_options;
   }
   examStore.answer = examAnswer.value;
   paperStore.question = question.value;
-  paperStore.questionGroup = questionGroup.value;
-  hasAudio.value = questionGroup.value.content.indexOf('<audio id="examAudio"') >= 0;
+  hasAudio.value = (paperStore.section?.content?.indexOf('<audio id="examAudio"') ?? -1) >= 0;
 
   const ops = [];
   for (const op of questionOptions.value) {
     ops.push({
       label: op.content,
-      value: op.code,
+      value: op.code || String.fromCharCode(65 + (op.seq - 1)), // Generate A, B, C, D if no code
     });
   }
   options.value = ops;
   answer.value = examAnswer.value ? examAnswer.value.answer : '';
   answerOld.value = answer.value;
   answered.value[question.value.seq - 1] = !!answer.value;
-  answer.value = examAnswer.value? examAnswer.value.answer : '';
+  
   if (question.value.question_type === QuestionType.DefiniteMultipleChoice
     || question.value.question_type === QuestionType.IndefiniteMultipleChoice) {
     group.value = examAnswer.value ? examAnswer.value.answer.split('|') : [];
@@ -189,10 +186,10 @@ function loadQuestion(result:QuestionResult | null=null) {
 
   audioPlayDlg.value = false;
   audioPlaying.value = false;
-  let audioPlayedTimesGroup = examStore.audioPlayTimes[questionGroup.value.id];
-  if (audioPlayedTimesGroup == undefined)
-    audioPlayedTimesGroup = 0;
-  audioPlayedTimes.value = audioPlayedTimesGroup;
+  let audioPlayedTimesSection = examStore.audioPlayTimes[paperStore.section?.id || ''];
+  if (audioPlayedTimesSection == undefined)
+    audioPlayedTimesSection = 0;
+  audioPlayedTimes.value = audioPlayedTimesSection;
   audioCurrentTime.value = '00:00';
   audioDuration.value = '00:00';
 }
@@ -247,10 +244,9 @@ function onAnswer() {
       exam_answer_id: examAnswer.value ? examAnswer.value.id : '',
       exam_id: examStore.exam.id,
       exam_section_id: examStore.section.id,
-      paper_id: paperStore.paper.id,
-      paper_section_id: paperStore.section.id,
+      paper_id: paperStore.paper?.id,
+      paper_section_id: paperStore.section?.id,
       question_id: question.value.id,
-      question_group_id: questionGroup.value.id,
       question_seq: question.value.seq,
     });
 }
@@ -296,13 +292,14 @@ function onAudioPlayConfirm() {
 }
 
 function onAudioPlay() {
+  const sectionId = paperStore.section?.id || '';
   if (audioPlayedTimes.value > audioPlayedMax) return;
-  const value = examStore.audioPlayTimes[questionGroup.value.id];
+  const value = examStore.audioPlayTimes[sectionId];
   if (value && value >= audioPlayedMax) {
     return;
   }
   audioPlayedTimes.value++;
-  examStore.audioPlayTimes[questionGroup.value.id] = audioPlayedTimes.value;
+  examStore.audioPlayTimes[sectionId] = audioPlayedTimes.value;
   const audioElement = document.getElementById('examAudio');
   if (audioElement) {
     audioPlaying.value = true;
@@ -325,13 +322,13 @@ function onAudioPlay() {
   audioPlayedTimes.value++;
 }
 
-function listQuestionsInGroupSuc(result: unknown) {
-  const data = result as QuestionsInGroupResult;
+function listQuestionsInSectionSuc(result: unknown) {
+  const data = result as QuestionsInSectionResult;
   const nodeMap = new Map<string, QTreeNode>();
 
   const questions = data.questions;
   questions.forEach(question => {
-    nodeMap.set(question.id, {
+    nodeMap.set(question.id!, {
       label: question.seq + '. ' + stripHtml(question.content),
       children: [],
     });
@@ -339,7 +336,7 @@ function listQuestionsInGroupSuc(result: unknown) {
 
   const options = data.question_options;
   options.forEach(option => {
-    const parentNode = nodeMap.get(option.question_id);
+    const parentNode = nodeMap.get(option.question_id || '');
     if (parentNode) {
       parentNode.children?.push({
         label: option.content,
@@ -348,23 +345,23 @@ function listQuestionsInGroupSuc(result: unknown) {
     }
   });
 
-  questionsInGroupTree.value = Array.from(nodeMap.values());
+  questionsInSectionTree.value = Array.from(nodeMap.values());
 }
 
-function listQuestionsInGroup() {
-  if (!questionsInGroupFlag.value)
+function listQuestionsInSection() {
+  if (!questionsInSectionFlag.value)
     return;
   accessWithToken({
     method: 'POST',
-    onSuccess: listQuestionsInGroupSuc,
+    onSuccess: listQuestionsInSectionSuc,
     token: userStore.token,
-    url: url_exam_questions_in_group,
+    url: url_exam_questions_in_section,
     onError: (message:string) => {
-      notifyError(message, 'Failed to list questions in Group ' + question.value.seq);
+      notifyError(message, 'Failed to list questions in Section ' + question.value.seq);
     },
   }, {
     exam_id: examStore.exam.id,
-    question_group_id: questionGroup.value.id,
+    section_id: paperStore.section?.id,
   });
 }
 
@@ -381,27 +378,27 @@ loadQuestion();
         <q-tooltip anchor="top middle" self="center middle" class="bg-secondary">Increase Font</q-tooltip>
       </q-btn>
       <q-toggle
-        v-model="questionsInGroupFlag"
-        @click="listQuestionsInGroup"
+        v-model="questionsInSectionFlag"
+        @click="listQuestionsInSection"
         color="secondary"
         label="show all questions"
       >
-        <q-tooltip anchor="top middle" self="center middle" class="bg-secondary">View all questions in this group</q-tooltip>
+        <q-tooltip anchor="top middle" self="center middle" class="bg-secondary">View all questions in this section</q-tooltip>
       </q-toggle>
     </div>
     <div class="text-center col-6">
       <q-btn flat round icon="keyboard_arrow_left" @click="willToQuestion(question.seq-1)"
-             :color="(questionsInGroupFlag || question.seq==1 || audioPlaying || recorderRef?.isRecording) ? 'grey' : 'secondary'"
-             :disable="questionsInGroupFlag || question.seq==1 || audioPlaying || recorderRef?.isRecording">
+             :color="(questionsInSectionFlag || question.seq==1 || audioPlaying || recorderRef?.isRecording) ? 'grey' : 'secondary'"
+             :disable="questionsInSectionFlag || question.seq==1 || audioPlaying || recorderRef?.isRecording">
         <q-tooltip anchor="top middle" self="center middle" class="bg-secondary">Previous Question</q-tooltip>
       </q-btn>
-      Question {{question.seq}} / {{paperStore.section.question_num}}
+      Question {{question.seq}} / {{paperStore.section?.question_num}}
       <q-btn flat round icon="keyboard_arrow_right" @click="willToQuestion(question.seq+1)"
-             :color="(questionsInGroupFlag || question.seq>=paperStore.section.question_num || audioPlaying || recorderRef?.isRecording) ? 'grey' : 'secondary'"
-             :disable="questionsInGroupFlag || question.seq>=paperStore.section.question_num || audioPlaying || recorderRef?.isRecording">
+             :color="(questionsInSectionFlag || question.seq>=(paperStore.section?.question_num || 0) || audioPlaying || recorderRef?.isRecording) ? 'grey' : 'secondary'"
+             :disable="questionsInSectionFlag || question.seq>=(paperStore.section?.question_num || 0) || audioPlaying || recorderRef?.isRecording">
         <q-tooltip anchor="top middle" self="center middle" class="bg-secondary">
-          <label v-if="question.seq < paperStore.section.question_num">Next Question</label>
-          <label v-if="question.seq == paperStore.section.question_num">End of Section</label>
+          <label v-if="question.seq < (paperStore.section?.question_num || 0)">Next Question</label>
+          <label v-if="question.seq == paperStore.section?.question_num">End of Section</label>
         </q-tooltip>
       </q-btn>
     </div>
@@ -422,9 +419,9 @@ loadQuestion();
       <template v-slot:before>
         <q-scroll-area style="height: 86vh">
           <div class="q-pa-md">
-            <div class="text-h6">{{questionGroup.title}}</div>
+            <div class="text-h6">{{paperStore.section?.name}}</div>
             <p></p>
-            <div v-html="questionGroup.content"></div>
+            <div v-html="paperStore.section?.content"></div>
           </div>
           <div class="row q-pa-md items-center" v-if="hasAudio">
             <q-btn color="primary" round icon="play_arrow" @click="onAudioPlayConfirm" :disable="audioPlayedTimes>=audioPlayedMax">
@@ -438,14 +435,14 @@ loadQuestion();
 
       <template v-slot:after>
         <q-scroll-area style="height: 86vh">
-          <div v-if="!questionsInGroupFlag">
+          <div v-if="!questionsInSectionFlag">
             <div class="q-pa-md">
               <div class="row">
                 <div v-html="question.content"></div>
               </div>
               <div>Answer:</div>
 
-              <div v-if="[QuestionType.SingleChoice, QuestionType.Listening].includes(question.question_type)">
+              <div v-if="question.question_type && [QuestionType.SingleChoice, QuestionType.Listening].includes(question.question_type)">
                 <q-option-group
                   v-model="answer"
                   :options="options"
@@ -453,7 +450,7 @@ loadQuestion();
                   color="primary"
                 />
               </div>
-              <div v-if="[QuestionType.DefiniteMultipleChoice, QuestionType.IndefiniteMultipleChoice].includes(question.question_type)">
+              <div v-if="question.question_type && [QuestionType.DefiniteMultipleChoice, QuestionType.IndefiniteMultipleChoice].includes(question.question_type)">
                 <q-option-group
                   v-model="group"
                   :options="options"
@@ -488,7 +485,7 @@ loadQuestion();
                     :disable="answer.trim()=='' || answer==answerOld"
                   />
                 </div>
-                <div class="text-right" v-if="paperStore.section?.question_num>5 && !audioPlaying && !recorderRef?.isRecording">
+                <div class="text-right" v-if="(paperStore.section?.question_num || 0) > 5 && !audioPlaying && !recorderRef?.isRecording">
                   <q-toggle v-model="mark" label="Mark for Review" color="orange" @update:model-value="onToggleMark" left-label/>
                   <q-btn color="secondary" round icon="preview" @click="onPreview"/>
                 </div>
@@ -496,12 +493,12 @@ loadQuestion();
             </div>
           </div>
 
-          <div v-if="questionsInGroupFlag">
+          <div v-if="questionsInSectionFlag">
             <div style="text-align: center; margin-bottom: 16px; color: red;">
               Preview Only! Please click "show all questions" toggle to switch back!
             </div>
             <q-tree
-              :nodes="questionsInGroupTree"
+              :nodes="questionsInSectionTree"
               node-key="label"
               default-expand-all
             />
@@ -525,7 +522,7 @@ loadQuestion();
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="reviewDlg" v-if="paperStore.section?.question_num>5" :disabled="audioPlaying || recorderRef?.isRecording">
+  <q-dialog v-model="reviewDlg" v-if="(paperStore.section?.question_num || 0) > 5" :disabled="audioPlaying || recorderRef?.isRecording">
     <q-card style="max-width: 120vw;">
       <q-btn-toggle
         v-model="reviewIdx"

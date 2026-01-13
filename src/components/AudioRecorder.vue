@@ -203,7 +203,7 @@ const onUpload = (response: unknown) => {
   });
 
   const exam = examStore.exam;
-  const fileName = `${exam.schedule_id}/${exam.schedule_session_id}/${userStore.user.enroll_number}_${paperStore.question.seq}.webm`;
+  const fileName = `${exam.schedule_id}/${exam.schedule_session_id}/${userStore.user.enroll_number}_${paperStore.question?.seq || 'unknown'}.webm`;
   client.put(fileName, audioBlob).then(() => {
     accessWithToken({
       method: 'POST',
@@ -215,11 +215,10 @@ const onUpload = (response: unknown) => {
       exam_answer_id: examStore.answer ? examStore.answer.id : '',
       exam_id: examStore.exam.id,
       exam_section_id: examStore.section.id,
-      paper_id: paperStore.paper.id,
-      paper_section_id: paperStore.section.id,
-      question_id: paperStore.question.id,
-      question_group_id: paperStore.questionGroup.id,
-      question_seq: paperStore.question.seq,
+      paper_id: paperStore.paper?.id,
+      paper_section_id: paperStore.section?.id,
+      question_id: paperStore.question?.id,
+      question_seq: paperStore.question?.seq,
     });
   }).catch(error => {
     console.error('Failed to upload:', error);

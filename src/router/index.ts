@@ -36,10 +36,21 @@ export default defineRouter(function (/* { store, ssrContext } */) {
 
   Router.beforeEach((to) => {
     const store = useUserStore();
-    //store.loadData();
-    if (!store.token && to.name!='home' && to.name!='404') {
-      // 将用户重定向到登录页面
-      return { name: 'home' }
+    const isProctorRoute = to.path.startsWith('/proctor');
+    const isProctorLogin = to.name === 'proctor-login';
+
+    // Allow proctor routes (they have their own auth check)
+    if (isProctorRoute) {
+      // Proctor pages (except login) should check for proctor token
+      if (!isProctorLogin && !localStorage.getItem('proctor_token')) {
+        return { name: 'proctor-login' };
+      }
+      return; // Allow the route
+    }
+
+    // Examinee routes require examinee token
+    if (!store.token && to.name !== 'home' && to.name !== '404') {
+      return { name: 'home' };
     }
   });
 

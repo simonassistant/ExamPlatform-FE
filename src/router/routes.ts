@@ -27,6 +27,26 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', name: 'question', component: () => import('pages/QuestionPage.vue') }],
   },
 
+  // Proctor routes
+  {
+    path: '/proctor/login',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', name: 'proctor-login', component: () => import('pages/proctor/ProctorLoginPage.vue') }],
+  },
+  {
+    path: '/proctor',
+    component: () => import('layouts/ProctorLayout.vue'),
+    children: [
+      { path: '', redirect: '/proctor/papers' }, // Dashboard redirects to papers
+      { path: 'dashboard', name: 'proctor-dashboard', redirect: '/proctor/papers' },
+      { path: 'papers', name: 'paper-list', component: () => import('pages/proctor/PaperListPage.vue') },
+      { path: 'papers/:id', name: 'paper-edit', component: () => import('pages/proctor/PaperEditorPage.vue') },
+      { path: 'schedules', name: 'schedule-list', component: () => import('pages/proctor/ScheduleListPage.vue') },
+      { path: 'schedules/:id', name: 'schedule-edit', component: () => import('pages/proctor/ScheduleEditorPage.vue') },
+      { path: 'sessions', name: 'session-list', redirect: '/proctor/schedules' }, // Sessions -> Schedules
+    ],
+  },
+
   // Always leave this as last one,
   // but you can also remove it
   {

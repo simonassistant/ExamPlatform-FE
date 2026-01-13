@@ -11,11 +11,11 @@ const paperStore = usePaperStore();
 const { paperList, isLoading, total } = storeToRefs(paperStore);
 
 const columns = [
-  { name: 'title', label: 'Title', field: 'title', align: 'left', sortable: true },
+  { name: 'title', label: 'Title', field: 'title', align: 'left' as const, sortable: true },
   { name: 'status', label: 'Status', field: 'status', sortable: true },
   { name: 'sections', label: 'Sections', field: 'section_count', sortable: true },
   { name: 'questions', label: 'Questions', field: 'question_count', sortable: true },
-  { name: 'actions', label: 'Actions', field: 'id', align: 'right' },
+  { name: 'actions', label: 'Actions', field: 'id', align: 'right' as const },
 ];
 
 onMounted(() => {
@@ -27,14 +27,14 @@ function notify(message: string, type: 'positive' | 'negative' = 'positive') {
 }
 
 function editPaper(row: any) {
-  router.push({ name: 'exam', query: { paperId: row.id } });
+  router.push({ name: 'paper-edit', params: { id: row.id } });
 }
 
 async function duplicatePaper(row: any) {
   try {
     const newId = await paperStore.duplicatePaper(row.id);
     notify('Paper duplicated');
-    router.push({ name: 'exam', query: { paperId: newId } });
+    router.push({ name: 'paper-edit', params: { id: newId } });
   } catch (e: any) {
     notify(e?.message || 'Duplicate failed', 'negative');
   }
@@ -58,7 +58,7 @@ async function deletePaper(row: any) {
 
 function newPaper() {
   paperStore.newDraft();
-  router.push({ name: 'exam' });
+  router.push({ name: 'paper-edit', params: { id: 'new' } });
 }
 </script>
 
